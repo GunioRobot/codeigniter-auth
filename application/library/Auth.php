@@ -8,6 +8,7 @@ class Auth {
 	{
 		$this->CI =& get_instance();
 
+		$this->CI->load->library('session');
 		$this->CI->load->library('email');
 		$this->CI->load->helper('url');
 		$this->CI->load->config('auth');
