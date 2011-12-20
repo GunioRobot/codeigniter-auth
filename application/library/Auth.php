@@ -1,4 +1,4 @@
-<?php if (!defined('BASEPATH')) exit('No direct script access allowed'); 
+<?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 class Auth {
 
@@ -14,13 +14,13 @@ class Auth {
 		$this->CI->load->config('auth');
 
 		$this->CI->load->database();
-		
+
 		$this->table = $this->CI->config->item('auth_table');
 		$this->table_fields = $this->CI->db->list_fields( $this->table );
 		$this->table_protected_fields = array("id", "user_salt", "activation_code", "activated_on", "created_on", "updated_on");
-		
+
 		$this->auth_domains = $this->CI->config->item('auth_domains');
-		$this->auth_login_fields = $this->CI->config->item('auth_login_fields');		
+		$this->auth_login_fields = $this->CI->config->item('auth_login_fields');
 	}
 
 	/**
@@ -53,12 +53,12 @@ class Auth {
 	{
 		$this->CI->db->where('email', $data["email"]);
 		$query = $this->CI->db->get($this->table);
-	
+
 		if( ! $query->num_rows() )
 		{
 			$user_salt = sha1(microtime());
 			$activation_key = sha1(microtime());
-			
+
 			$usercode = $this->_unique_code();
 
 			$email 		= $data['email'];
@@ -69,38 +69,38 @@ class Auth {
 				'email' => $email,
 				'user_salt' => $user_salt,
 				'password' => $password,
-				'activation_code' => $activation_key,				
+				'activation_code' => $activation_key,
 				'created_on' => date("Y-m-d H:i"),
 				'updated_on' => date("Y-m-d H:i")
 			);
-			
+
 			// active
       $query_data["active"] = ( $this->CI->config->item('auth_require_activation') ) ? 0 : 1;
-			
+
 			// extra fields
 			foreach($this->CI->config->item('auth_table_fields') as $extra_field)
 			{
         $query_data[ $extra_field ] = $data[ $extra_field ];
 			}
-	
+
 			$this->CI->db->insert($this->table, $query_data);
-			
+
 			$query = $this->CI->db->get_where($this->table, array('id' => $this->CI->db->insert_id()));
 			$user = $query->row();
-			
+
 			// send activation key
       if( $this->CI->config->item('auth_require_activation') )
       {
         $this->send_activation_link($query_data["username"], $query_data["email"], $query_data["activation_code"]);
       }
-			
+
 			// return $user;
 			return "SUCCESS";
 		}
 		else
 		{
 			return "EMAIL_TAKEN";
-		}	
+		}
 	}
 
 	/**
@@ -116,14 +116,14 @@ class Auth {
 
 		$this->CI->db->where(array("id" => $user_data["id"]));
 		$query = $this->CI->db->get($this->table);
-		
+
 		// check if user exists
 		if($query->num_rows() > 0){
 			$user = $query->row();
-			
+
       // check password
 			$password_check = (isset($user_data["old_password"])) ? $this->_check_password($user_data["old_password"], $user->password, $user->user_salt ) : TRUE;
-			
+
 			if( $password_check )
 			{
 				// encrypt password
@@ -131,21 +131,21 @@ class Auth {
 				{
 					$user_data["password"] = $this->_encrypt_password($user_data["password"], $user->user_salt);
 				}
-				
+
 				// filter fields to be updated
 				$table_fields = array_diff($this->table_fields, $this->table_protected_fields);
 				foreach($table_fields as $table_field)
 				{
 					if(isset($user_data[$table_field])) $user_update_data[$table_field] = $user_data[$table_field];
 				}
-				
+
 				$this->CI->db->where('id', $user_data["id"]);
 				$this->CI->db->update($this->table, $user_update_data);
-				
+
 				return "SUCCESS";
-				
+
 			} else return "WRONG_PASSWORD";
-		}    
+		}
   }
 
 	/**
@@ -158,22 +158,22 @@ class Auth {
 	function activate($code)
 	{
     $this->CI->load->library('session');
-	
+
 		$query = $this->CI->db->get_where($this->table, array('activation_code' => $code));
-		
+
 		if($query->num_rows() > 0)
 		{
 			$user = $query->row();
-			
+
 			$query_data = array(
 				'activation_code' => NULL,
 				'active' => 1,
 				'activated_at' => date("Y-m-d H:i")
 			);
-	
+
 			$this->CI->db->where('activation_code', $code);
 			$this->CI->db->update($this->table, $query_data);
-			
+
 			return $user;
 		}
 	}
@@ -198,24 +198,24 @@ class Auth {
 		$where = implode(" OR ", $login_fields_where);
 		$this->CI->db->where($where);
 		$query = $this->CI->db->get($this->table);
-		
+
 		// check if user exists
-		
+
 		if($query->num_rows() > 0)
 		{
 			$user = $query->row();
-		
+
 			if( $user->active )
-			{				
+			{
         // check password
 				if( $this->_check_password($data["password"], $user->password, $user->user_salt ) OR ! isset($data["password"]) )
-				{										
+				{
 					/*
 						TODO Adicionar campos customizados à sessão
 					*/
-					
+
 					$userdata = array ('user_id' 	=> $user->id, 'email' 	=> $user->email, 'level' 	=> $user->level );
-  								
+
 					$this->CI->session->set_userdata($userdata);
 					return "SUCCESS";
 				}
@@ -226,10 +226,10 @@ class Auth {
 				}
 			}
 			// not active
-			else 
+			else
 			{
 				return "USER_NOT_ACTIVE";
-			}				
+			}
 		}
 		else
 		{
@@ -250,7 +250,7 @@ class Auth {
 		$this->CI->session->sess_destroy();
 
 		$redirect = $this->auth_domains["default"]["logout_redirect"];
-		redirect($redirect);		
+		redirect($redirect);
 	}
 
 	/**
@@ -259,13 +259,13 @@ class Auth {
 	* @access	public
 	* @return boolean
 	*/
-	
+
 	function restrict($level = NULL, $redirect = NULL)
 	{
     $this->CI->load->library('session');
-    
+
 		$authorized = FALSE;
-    
+
 		if( $this->CI->session->userdata('user_id') ) {
 			// check user level
 			if(isset($params["level"])){
@@ -275,15 +275,15 @@ class Auth {
 			} else {
 				$authorized = TRUE;
 			}
-			
+
 			// check user domain
 			// check user's login fields
 		}
-		
+
 		if( ! $authorized )
 		{
 			$this->CI->session->set_flashdata('msg', 'Você precisa estar logado.');
-			
+
 			$redirect = $this->auth_domains["default"]["restrict_redirect"];
 			redirect($redirect);
 		}
@@ -295,36 +295,36 @@ class Auth {
 	* @access	public
 	* @return boolean
 	*/
-	
+
 	function logged_in($domain = NULL)
 	{
     $this->CI->load->library('session');
     return ( ! $this->CI->session->userdata('user_id') ) ? 0 : 1;
 	}
-	
+
 	/**
 	* Forgot Password
 	*
 	* @access	public
 	* @return 	object Entry
-	*/	
-	
+	*/
+
 	function forgot_password($login)
 	{
 		$this->CI->db->where("username", $login);
 		$this->CI->db->or_where("email", $login);
 		$query = $this->CI->db->get($this->table);
-	
+
 		if($query->num_rows() > 0)
 		{
 			$user = $query->row();
 			$key = sha1(microtime());
-			
+
 			$this->CI->db->where("id", $user->id);
 			$this->CI->db->update($this->table, array('forgot_code' => $key));
-			
-			$user->forgot_code = $key;			
-			
+
+			$user->forgot_code = $key;
+
 			return $user;
 		}
 		else
@@ -332,14 +332,14 @@ class Auth {
 			return FALSE;
 		}
 	}
-	
+
 	/**
 	* Send activation link
 	*
 	* @access	public
 	* @return 	object Entry
 	*/
-	
+
 	function send_activation_link($username, $email, $key)
 	{
 		$config['mailtype'] = 'html';
@@ -349,22 +349,22 @@ class Auth {
 		$data['username'] = $username;
 
 		$message = $this->CI->load->view('email/activate', $data, true);
-		
+
 		$this->CI->email->from('nao-responda@anhembi.br', 'Casa Anhembi Verão Guarujá');
 		$this->CI->email->to($email);
 		$this->CI->email->subject('Casa Anhembi Verão Guarujá: Confirmação de e-mail.');
 		$this->CI->email->message( $message );
-		
+
 		$this->CI->email->send();
-	}	
-	
+	}
+
 	/**
 	* Send activation success
 	*
 	* @access	public
 	* @return 	object Entry
-	*/	
-	
+	*/
+
 	function send_activation_success($username, $email, $key)
 	{
 		$user = $this->user_model->get( array('username' => $username), true );
@@ -379,10 +379,10 @@ class Auth {
 		  'subject' => '[troqua] Sua conta foi ativada com sucesso',
 		  'message' => $this->load->view('email/confirmation_success', $data, true)
 		);
-		
+
 		$this->_send_email($email_data);
-	}	
-	
+	}
+
 	/**
 	* Send Forgot Password
 	*
@@ -394,34 +394,34 @@ class Auth {
 	{
 		$message_data['key'] = $key;
 		$message_data['username'] = $username;
-		
+
 		$email_data = array(
 		  'from_email' => '',
 		  'from_name' => '',
 		  'subject' => '',
 		  'message' => $this->load->view('email/forgot', $message_data, true)
 		);
-		
+
 		return $this->_send_email($email_data);
 	}
-	
+
 	/**
 	* Send Mail
 	*
 	* @access	private
 	* @return boolean
 	*/
-	
+
   function _send_email($data)
   {
 		$config['mailtype'] = 'html';
 		$this->CI->email->initialize($config);
-  
+
 		$this->CI->email->from($data["from_email"], $data["from_name"]);
 		$this->CI->email->to($data["to_email"]);
 		$this->CI->email->subject($data["subject"]);
 		$this->CI->email->message($data["message"]);
-		
+
 		if( $this->CI->email->send() ) return 1;
   }
 
@@ -436,7 +436,7 @@ class Auth {
 	{
 		$salt = $this->CI->config->item('encryption_key');
 		$encrypted_password = sha1($salt.$user_salt.$password);
-	
+
 		return $encrypted_password;
 	}
 
@@ -451,7 +451,7 @@ class Auth {
 	{
 		$salt = $this->CI->config->item('encryption_key');
 		$pass = sha1($salt.$user_salt.$pass);
-	
+
 		return ($pass == $enc) ? TRUE : FALSE;
 	}
 
